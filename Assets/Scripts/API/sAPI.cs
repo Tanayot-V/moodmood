@@ -78,7 +78,7 @@ namespace SekaiLib
                 apiPath = apiPath.Remove(0, 1);
             }
 
-            apiPath = Regex.Replace(apiPath, @"api/v\d+/(.*)", "$1");
+            //apiPath = Regex.Replace(apiPath, @"api/v\d+/(.*)", "$1");
 
             sAPIInfo config = sAPIInfo.Default;
             if (config == null)
@@ -87,7 +87,7 @@ namespace SekaiLib
                 yield break;
             }
 
-            string url = string.Format("{0}/api/v{1}/{2}", config.endPoint, config.version, apiPath);
+            string url = string.Format("{0}/{2}", config.endPoint, config.version, apiPath);
             if (apiPath.StartsWith("http"))
             {
                 url = apiPath;
@@ -141,10 +141,10 @@ namespace SekaiLib
                 break;
             }
 
-            // Debug.Log("response J-Son : " + req.result);
-            // Debug.Log("response J-Son : " + req.downloadHandler.text);
+            //Debug.Log("response J-Son : " + req.result);
+            Debug.Log("response J-Son : " + req.downloadHandler.text);
             sWebResponse<T> result = JsonConvert.DeserializeObject<sWebResponse<T>>(req.downloadHandler.text);
-            result.attachment = option.attachment;
+            //result.attachment = option.attachment;
             callback?.Invoke(result, req);
         }
     }
@@ -202,11 +202,13 @@ namespace SekaiLib
     [System.Serializable]
     public class sWebResponse<T>
     {
-        public bool success;
-        public int responseType;
+        //public bool success;
+        //public int responseType;
+        public int code;
+        public string message;
         public T data;
-        public SWebResponseError error;
-        public object attachment;
+        //public SWebResponseError error;
+        //public object attachment;
 
         public string ToJson(bool format = false)
         {
