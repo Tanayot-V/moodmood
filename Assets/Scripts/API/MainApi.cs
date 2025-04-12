@@ -30,7 +30,7 @@ public class MainApi : MonoBehaviour
 
     [Space(20)]
     [Header("DATA")]
-    public AccountResponseModel AccountResponse = new AccountResponseModel();
+    public AccountResponseModel AccountResponse;
 
     public void Register(
         string invite_code,
@@ -42,7 +42,7 @@ public class MainApi : MonoBehaviour
         string first_name,
         string last_name,
         string student_number,
-        Action<bool, AccountResponseModel> callback = null
+        Action<bool, sWebResponse<AccountResponseModel>> callback = null
     )
     {
         StartCoroutine(RegisterCoroutine(invite_code, email, password, password_confirmation, sex, prefix_name, first_name, last_name, student_number, callback));
@@ -57,7 +57,7 @@ public class MainApi : MonoBehaviour
         string first_name,
         string last_name,
         string student_number,
-        Action<bool, AccountResponseModel> callback = null
+        Action<bool, sWebResponse<AccountResponseModel>> callback = null
     )
     {
         WWWForm form = new WWWForm();
@@ -71,29 +71,18 @@ public class MainApi : MonoBehaviour
         form.AddField("last_name", last_name);
         form.AddField("student_number", student_number);
 
-        Dictionary<string, string> header = new Dictionary<string, string>();
-        header.Add("invite_code", invite_code);
-        header.Add("email", email);
-        header.Add("password", password);
-        header.Add("password_confirmation", password_confirmation);
-        header.Add("sex", sex);
-        header.Add("prefix_name", prefix_name);
-        header.Add("first_name", first_name);
-        header.Add("last_name", last_name);
-        header.Add("student_number", student_number);
-
         yield return sAPI.POST<AccountResponseModel>("/api/student/register",form , null, (result, req) =>
         {
-            if (result != null)
+            if (result.code == 200)
             {
                 Debug.Log($"Register response: {result?.message}");
-                callback?.Invoke(true,result.data);
+                callback?.Invoke(true,result);
                 AccountResponse = result.data;
             }
             else
             {
                 Debug.LogError($"Register failed: No response from server");
-                callback?.Invoke(false,null);
+                callback?.Invoke(false,result);
             }
         });    
     }
@@ -102,7 +91,7 @@ public class MainApi : MonoBehaviour
         string email,
         string password,
         Roles roles,
-        Action<bool, AccountResponseModel> callback = null
+        Action<bool, sWebResponse<AccountResponseModel>> callback = null
     )
     {
         StartCoroutine(LoginCoroutine(email, password, roles, callback));
@@ -112,7 +101,7 @@ public class MainApi : MonoBehaviour
         string email,
         string password,
         Roles roles,
-        Action<bool, AccountResponseModel> callback = null
+        Action<bool, sWebResponse<AccountResponseModel>> callback = null
     )
     {
         WWWForm form = new WWWForm();
@@ -120,45 +109,40 @@ public class MainApi : MonoBehaviour
         form.AddField("password", password);
         form.AddField("type", roles.ToString());
 
-        Dictionary<string, string> header = new Dictionary<string, string>();
-        header.Add("email", email);
-        header.Add("password", password);
-        header.Add("type", roles.ToString());
-
         yield return sAPI.POST<AccountResponseModel>("/api/login", form, null, (result, req) =>
         {
-            if (result != null)
+            if (result.code == 200)
             {
                 Debug.Log($"Login response: {result?.message}");
-                callback?.Invoke(true,result.data);
+                callback?.Invoke(true,result);
                 AccountResponse = result.data;
             }
             else
             {
                 Debug.LogError($"Login failed: No response from server");
-                callback?.Invoke(false,null);
+                callback?.Invoke(false,result);
             }
         });
     }
 
-    public void GetMood(DateTime start,DateTime end, int student_id, Action<bool, JsonObject> callback = null)
+    public void GetMood(DateTime start,DateTime end, int student_id, Action<bool, sWebResponse<JsonObject>> callback = null)
     {
         StartCoroutine(GetMoodCoroutine(start, end, student_id, callback));
     }
-    private IEnumerator GetMoodCoroutine(DateTime start, DateTime end, int student_id, Action<bool, JsonObject> callback = null)
+    private IEnumerator GetMoodCoroutine(DateTime start, DateTime end, int student_id, Action<bool, sWebResponse<JsonObject>> callback = null)
     {
         string path = $"/api/student/get-moods?date_start={start.Date}&date_end={end.Date}&student_id={student_id}";
         yield return sAPI.GET<JsonObject>(path, null, (result, req) =>
         {
-            if (result != null)
+            if (result.code == 200)
             {
                 Debug.Log($"GetMood response: {result?.message}");
-                callback?.Invoke(true,result.data);
+                callback?.Invoke(true,result);
             }
             else
             {
                 Debug.LogError($"GetMood failed: No response from server");
-                callback?.Invoke(false,null);
+                callback?.Invoke(false,result);
             }
         });
     }

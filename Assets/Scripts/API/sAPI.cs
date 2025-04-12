@@ -207,7 +207,7 @@ namespace SekaiLib
         public int code;
         public string message;
         public T data;
-        //public SWebResponseError error;
+        public SWebResponseError errors;
         //public object attachment;
 
         public string ToJson(bool format = false)
@@ -228,10 +228,7 @@ namespace SekaiLib
     [System.Serializable]
     public class SWebResponseError
     {
-        public int status;
-        public string message;
-        public string timestamp;
-        public string internalErrorMessage;
+        public string[] invalid;
     }
 
 }
