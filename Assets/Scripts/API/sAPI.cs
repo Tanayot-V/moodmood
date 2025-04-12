@@ -5,6 +5,7 @@ using Newtonsoft.Json;
 using UnityEngine;
 using UnityEngine.Networking;
 using System.Text.RegularExpressions;
+using System.Text;
 
 namespace SekaiLib
 {
@@ -15,8 +16,60 @@ namespace SekaiLib
         public object attachment = null;
     }
 
+
+
     public class sAPI
     {
+        public static IEnumerator GET<T>(string apiPath, Dictionary<string, string> headers, Action<sWebResponse<T>, UnityWebRequest> callback = null, sAPIOption option = null)
+        {
+            yield return ProcessRequest<T>(apiPath, headers, option == null ? new sAPIOption() : option, callback, (url) => UnityWebRequest.Get(url));
+        }
+
+
+        public static IEnumerator POST<T>(string apiPath, object jsonData, Dictionary<string, string> headers, Action<sWebResponse<T>, UnityWebRequest> callback = null, sAPIOption option = null)
+        {
+            yield return ProcessRequest<T>(apiPath, headers, option == null ? new sAPIOption() : option, callback, (url) => {
+                string json = JsonConvert.SerializeObject(jsonData);
+                UnityWebRequest uwr = UnityWebRequest.PostWwwForm(url, json);
+                uwr.uploadHandler   = (UploadHandler)   new UploadHandlerRaw(Encoding.UTF8.GetBytes(json));
+                uwr.downloadHandler = (DownloadHandler) new DownloadHandlerBuffer();
+                uwr.SetRequestHeader("Content-Type", "application/json");
+                return uwr;
+            });
+        }
+
+
+        public static IEnumerator POST<T>(string apiPath, WWWForm form, Dictionary<string, string> headers, Action<sWebResponse<T>, UnityWebRequest> callback = null, sAPIOption option = null)
+        {
+            yield return ProcessRequest<T>(apiPath, headers, option == null ? new sAPIOption() : option, callback, (url) => {
+                UnityWebRequest uwr = UnityWebRequest.Post(url, form);
+                uwr.downloadHandler = (DownloadHandler) new DownloadHandlerBuffer();
+                return uwr;
+            });
+        }
+
+
+        public static IEnumerator DELETE<T>(string apiPath, Dictionary<string, string> headers, Action<sWebResponse<T>, UnityWebRequest> callback = null, sAPIOption option = null)
+        {
+            yield return ProcessRequest<T>(apiPath, headers, option == null ? new sAPIOption() : option, callback, (url) => {
+                UnityWebRequest uwr = UnityWebRequest.Delete(url);
+                uwr.downloadHandler = (DownloadHandler) new DownloadHandlerBuffer();
+                return uwr;
+            });
+        }
+
+
+        public static IEnumerator PUT<T>(string apiPath, object jsonData, Dictionary<string, string> headers, Action<sWebResponse<T>, UnityWebRequest> callback = null, sAPIOption option = null)
+        {
+            yield return ProcessRequest<T>(apiPath, headers, option == null ? new sAPIOption() : option, callback, (url) => {
+                string json = JsonConvert.SerializeObject(jsonData);
+                UnityWebRequest uwr = UnityWebRequest.Put(url, json);
+                uwr.uploadHandler   = (UploadHandler)   new UploadHandlerRaw(Encoding.UTF8.GetBytes(json));
+                uwr.downloadHandler = (DownloadHandler) new DownloadHandlerBuffer();
+                uwr.SetRequestHeader("Content-Type", "application/json");
+                return uwr;
+            });
+        }
         private static IEnumerator ProcessRequest<T>(string apiPath, Dictionary<string, string> headers, sAPIOption option, Action<sWebResponse<T>, UnityWebRequest> callback, Func<string, UnityWebRequest> requester)
         {
             // Clear slash
