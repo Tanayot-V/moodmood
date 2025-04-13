@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using Newtonsoft.Json;
 using UnityEngine;
 using UnityEngine.Networking;
-using System.Text.RegularExpressions;
 using System.Text;
 
 namespace SekaiLib
@@ -93,7 +92,7 @@ namespace SekaiLib
                 url = apiPath;
             }
             
-            //Debug.Log("[Info.Endpoint]: " + url);
+            Debug.Log("[Info.Endpoint]: " + url);
 
             if (headers == null)
             {

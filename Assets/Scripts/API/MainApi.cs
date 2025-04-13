@@ -3,7 +3,6 @@ using System.Collections;
 using System.Collections.Generic;
 using Newtonsoft.Json.Linq;
 using SekaiLib;
-using UnityEditor.ShaderGraph.Serialization;
 using UnityEngine;
 
 public class MainApi : MonoBehaviour
@@ -31,6 +30,9 @@ public class MainApi : MonoBehaviour
     [Space(20)]
     [Header("DATA")]
     public AccountResponseModel AccountResponse;
+    public Dictionary<string, MoodData> Moods = new Dictionary<string, MoodData>();
+    public GetOveraLLResponse overallResponse;
+    public GetOveraLLDetailResponse overallDetailResponse;
 
     public void Register(
         string invite_code,
@@ -119,29 +121,177 @@ public class MainApi : MonoBehaviour
             }
             else
             {
-                Debug.LogError($"Login failed: No response from server");
+                Debug.LogError($"Login failed: {result?.message}");
                 callback?.Invoke(false,result);
             }
         });
     }
 
-    public void GetMood(DateTime start,DateTime end, int student_id, Action<bool, sWebResponse<JsonObject>> callback = null)
+    public void ForgotPassword(
+        string email,
+        Action<bool, sWebResponse<JObject>> callback = null
+    )
+    {
+        StartCoroutine(ForgotPasswordCoroutine(email, callback));
+    }
+    private IEnumerator ForgotPasswordCoroutine(
+        string email,
+        Action<bool, sWebResponse<JObject>> callback = null
+    )
+    {
+        WWWForm form = new WWWForm();
+        form.AddField("email", email);
+
+        yield return sAPI.POST<JObject>("/api/student/forgot-password", form, null, (result, req) =>
+        {
+            if (result.code == 200)
+            {
+                Debug.Log($"ForgotPassword response: {result?.message}");
+                callback?.Invoke(true,result);
+            }
+            else
+            {
+                Debug.LogError($"ForgotPassword failed: {result?.message}");
+                callback?.Invoke(false,result);
+            }
+        });
+    }
+
+    public void ResetPassword(string token, string password, string passwordConfirm, Action<bool, sWebResponse<JObject>> callback = null)
+    {
+        StartCoroutine(ResetPasswordCoroutine(token, password, passwordConfirm, callback));
+    }
+    private IEnumerator ResetPasswordCoroutine(string token, string password, string passwordConfirm, Action<bool, sWebResponse<JObject>> callback = null)
+    {
+        WWWForm form = new WWWForm();
+        form.AddField("token", token);
+        form.AddField("password", password);
+        form.AddField("password_confirmation", passwordConfirm);
+
+        yield return sAPI.POST<JObject>("/api/student/reset-password", form, null, (result, req) =>
+        {
+            if (result.code == 200)
+            {
+                Debug.Log($"ResetPassword response: {result?.message}");
+                callback?.Invoke(true,result);
+            }
+            else
+            {
+                Debug.LogError($"ResetPassword failed: {result?.message}");
+                callback?.Invoke(false,result);
+            }
+        });
+    }
+
+    public void GetMood(DateTime start,DateTime end, int student_id, Action<bool, sWebResponse<Dictionary<string,MoodData>>> callback = null)
     {
         StartCoroutine(GetMoodCoroutine(start, end, student_id, callback));
     }
-    private IEnumerator GetMoodCoroutine(DateTime start, DateTime end, int student_id, Action<bool, sWebResponse<JsonObject>> callback = null)
+    private IEnumerator GetMoodCoroutine(DateTime start, DateTime end, int student_id, Action<bool, sWebResponse<Dictionary<string,MoodData>>> callback = null)
     {
-        string path = $"/api/student/get-moods?date_start={start.Date}&date_end={end.Date}&student_id={student_id}";
-        yield return sAPI.GET<JsonObject>(path, null, (result, req) =>
+        string path = $"/api/student/get-moods?date_start={start.ToString("yyyy-MM-dd")}&date_end={end.ToString("yyyy-MM-dd")}&student_id={student_id}";
+        yield return sAPI.GET<Dictionary<string,MoodData>>(path, null, (result, req) =>
         {
             if (result.code == 200)
             {
                 Debug.Log($"GetMood response: {result?.message}");
                 callback?.Invoke(true,result);
+                Moods = result.data;
             }
             else
             {
-                Debug.LogError($"GetMood failed: No response from server");
+                Debug.LogError($"GetMood failed: {result?.message}");
+                callback?.Invoke(false,result);
+            }
+        });
+    }
+
+    public void CreateMood(CreateMoodRequest request, Action<bool, sWebResponse<MoodData>> callback = null)
+    {
+        StartCoroutine(CreateMoodCoroutine(request, callback));
+    }
+    private IEnumerator CreateMoodCoroutine(CreateMoodRequest request, Action<bool, sWebResponse<MoodData>> callback = null)
+    {
+        yield return sAPI.POST<MoodData>("/api/student/create-mood", request, null, (result, req) =>
+        {
+            if (result.code == 200)
+            {
+                Debug.Log($"CreateMood response: {result?.message}");
+                callback?.Invoke(true,result);
+            }
+            else
+            {
+                Debug.LogError($"CreateMood failed: {result?.message}");
+                callback?.Invoke(false,result);
+            }
+        });
+    }
+
+    public void CreateSOS(string studentId, string message, Action<bool, sWebResponse<JObject>> callback = null)
+    {
+        StartCoroutine(CreateSOSCoroutine(studentId, message, callback));
+    }
+    private IEnumerator CreateSOSCoroutine(string studentId, string message, Action<bool, sWebResponse<JObject>> callback = null)
+    {
+        WWWForm form = new WWWForm();
+        form.AddField("student_id", studentId);
+        form.AddField("message", message);
+
+        yield return sAPI.POST<JObject>("/api/student/create-sos", form, null, (result, req) =>
+        {
+            if (result.code == 200)
+            {
+                Debug.Log($"CreateSOS response: {result?.message}");
+                callback?.Invoke(true,result);
+            }
+            else
+            {
+                Debug.LogError($"CreateSOS failed: {result?.message}");
+                callback?.Invoke(false,result);
+            }
+        });
+    }
+
+    public void GetOveraLL(int studentId, getDataType type, period period, Action<bool, sWebResponse<GetOveraLLResponse>> callback = null)
+    {
+        StartCoroutine(GetOverallCoroutine(studentId, type, period, callback));
+    }
+    private IEnumerator GetOverallCoroutine(int studentId, getDataType type, period period, Action<bool, sWebResponse<GetOveraLLResponse>> callback = null)
+    {
+        string path = $"/api/student/get-overall?student_id={studentId}&type={type.ToString()}&period={period.ToString()}";
+        yield return sAPI.GET<GetOveraLLResponse>(path, null, (result, req) =>
+        {
+            if (result.code == 200)
+            {
+                Debug.Log($"GetOverall response: {result?.message}");
+                overallResponse = result.data;
+                callback?.Invoke(true,result);
+            }
+            else
+            {
+                Debug.LogError($"GetOverall failed: {result?.message}");
+                callback?.Invoke(false,result);
+            }
+        });
+    }
+    public void GetOveraLLDetail(int studentId, getDataType type, period period,int mood, Action<bool, sWebResponse<GetOveraLLDetailResponse>> callback = null)
+    {
+        StartCoroutine(GetOverallDetailCoroutine(studentId, type, period, mood, callback));
+    }
+    private IEnumerator GetOverallDetailCoroutine(int studentId, getDataType type, period period, int mood, Action<bool, sWebResponse<GetOveraLLDetailResponse>> callback = null)
+    {
+        string path = $"/api/student/get-overall-detail?student_id={studentId}&type={type.ToString()}&period={period.ToString()}&mood={mood}";
+        yield return sAPI.GET<GetOveraLLDetailResponse>(path, null, (result, req) =>
+        {
+            if (result.code == 200)
+            {
+                Debug.Log($"GetOverallDetail response: {result?.message}");
+                overallDetailResponse = result.data;
+                callback?.Invoke(true,result);
+            }
+            else
+            {
+                Debug.LogError($"GetOverallDetail failed: {result?.message}");
                 callback?.Invoke(false,result);
             }
         });
@@ -153,4 +303,16 @@ public enum Roles
     student = 0,
     teacher = 1,
     ADMIN = 9
+}
+
+public enum getDataType
+{
+    self,
+    friend,
+}
+public enum period
+{
+    current_week,
+    previous_week,
+    month
 }
